@@ -1,0 +1,84 @@
+<?php
+
+/**
+* Implements hook_menu()
+*/
+function sms_fowiz_menu() {
+  $items['fowiz'] = array(
+    'page callback' => 'sms_fowiz_recieve',
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function sms_fowiz_recieve() {
+  sms_incoming($_POST['phone_number'], $_POST['message'], array('sent' => $_POST['timestamp']));
+}
+
+/**
+* Implement hook_gateway_info
+*/
+function sms_fowiz_gateway_info() {
+  return array(
+    'sms_fowiz' => array(
+      'name' => 'FOWiz Gateway',
+      'send' => 'sms_fowiz_send',
+      'recieve' => TRUE,
+      'configure form' => 'sms_fowiz_settings',
+    )
+  );
+}
+
+/**
+* SMS Send Function
+*/
+function sms_fowiz_send($number, $message, $options) {
+  $gateway = sms_gateways('gateway', 'sms_fowiz');
+  $curl = curl_init();
+  curl_setopt($curl, CURLOPT_URL,
+        "http://cloud.fowiz.com/api/message_http_api.php");
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query(
+        array(
+          'username' => $gateway['configuration']['sms_fowiz_user'],
+          'phonenumber' => $number,
+          'message' => $message,
+          'passcode' => $gateway['configuration']['sms_fowiz_pass'],
+        ),
+        '',
+        '&'
+      )
+    );
+
+    $result = curl_exec($curl);
+    $error = curl_error($curl);
+    curl_close($curl);
+
+    return array(
+      'status' => (strpos($result, 'Bad Request!') < 0) ? TRUE : FALSE,
+      'message' => t('Cound not send message to %number.'),
+      'variables' => array('%number', $number)
+    );
+}
+
+/**
+* SMS Configuration form.
+*/
+function sms_fowiz_settings($configuration) {
+  $form['sms_fowiz_user'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#description' => t('FOWiz username.'),
+    '#default_value' => $configuration['sms_fowiz_user']
+  );
+
+  $form['sms_fowiz_pass'] = array(
+    '#type' => 'password',
+    '#title' => t('Passcode'),
+    '#description' => t('FOWiz passcode.'),
+    '#default_value' => $configuration['sms_fowiz_pass']
+  );
+
+  return $form;
+}

@@ -1,0 +1,8 @@
+name = "SMS FOWiz"
+description = "Creates the SMS Gateway for the FOWiz api."
+package = SMS Framework
+core = 7.x
+
+project = "smsframework"
+
+dependencies[] = sms
